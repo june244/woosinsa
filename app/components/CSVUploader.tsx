@@ -42,6 +42,7 @@ const CSVUploader: React.FC = () => {
 
   const readCSVFile = (file: File, encoding: string): Promise<any> => {
     return new Promise((resolve, reject) => {
+      // @ts-ignore
       Papa.parse(file, {
         header: true, // 두 파일 모두 헤더가 있음
         skipEmptyLines: true,
