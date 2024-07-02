@@ -20,6 +20,9 @@ interface DataRecord {
 const CSVUploader: React.FC = () => {
   const [data, setData] = useState<Array<DataRecord> | null>(null);
   const [brandData, setBrandData] = useState<Record<string, string>>({});
+  const [topN, setTopN] = useState<number>(5);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
 
   const handleFileUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -89,6 +92,13 @@ const CSVUploader: React.FC = () => {
         };
       });
       setData(mappedData);
+
+      // 배송국가 목록 추출
+      const countryList = Array.from(
+        new Set(mappedData.map((row) => row.배송국가))
+      );
+      setCountries(countryList);
+      setSelectedCountry(countryList[0] || ""); // 첫 번째 국가를 기본 선택
     } else if (type === "new") {
       const newCSVData = results.reduce(
         (acc: Record<string, string>, row: any) => {
@@ -120,10 +130,13 @@ const CSVUploader: React.FC = () => {
     }
   };
 
-  const downloadJapanTop5CSV = () => {
-    if (data) {
-      const japanData = data.filter((row) => row["배송국가"] === "일본");
-      const aggregatedData = japanData.reduce(
+  const downloadCountryTopNCSV = () => {
+    if (data && selectedCountry) {
+      const countryData = data.filter(
+        (row) =>
+          row["배송국가"] === selectedCountry || selectedCountry === "all"
+      );
+      const aggregatedData = countryData.reduce(
         (acc: Record<string, { totalAmount: number; count: number }>, row) => {
           if (acc[row["상품번호"]]) {
             acc[row["상품번호"]].totalAmount += row["거래액(원화"];
@@ -139,9 +152,9 @@ const CSVUploader: React.FC = () => {
         {}
       );
 
-      const top5 = Object.entries(aggregatedData)
+      const topNData = Object.entries(aggregatedData)
         .sort((a, b) => b[1].totalAmount - a[1].totalAmount)
-        .slice(0, 5)
+        .slice(0, topN)
         .map(([상품번호, { totalAmount, count }]) => {
           const row = data.find((item) => item["상품번호"] === 상품번호);
           return {
@@ -154,15 +167,15 @@ const CSVUploader: React.FC = () => {
           };
         });
 
-      const csv = Papa.unparse(top5);
+      const csv = Papa.unparse(topNData);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      saveAs(blob, "japan_top5_data.csv");
+      saveAs(blob, `${selectedCountry}_topN_data.csv`);
     }
   };
 
   return (
     <div>
-      <div className='mb-4'>
+      <div className='mb-4 flex items-center space-x-2'>
         <input
           type='file'
           accept='.csv'
@@ -176,15 +189,45 @@ const CSVUploader: React.FC = () => {
         />
         <button
           onClick={downloadCSV}
-          className='mt-4 px-4 py-2 bg-blue-500 text-white rounded'
+          className='px-4 py-2 bg-blue-500 text-white rounded'
         >
           Download CSV
         </button>
+        <div>
+          <label htmlFor='topNInput' className='mr-2'>
+            Top N 개수:
+          </label>
+          <input
+            type='number'
+            id='topNInput'
+            value={topN}
+            onChange={(e) => setTopN(Number(e.target.value))}
+            className='px-2 py-1 border rounded text-black'
+          />
+        </div>
+        <div>
+          <label htmlFor='countrySelect' className='mr-2'>
+            국가 선택:
+          </label>
+          <select
+            id='countrySelect'
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            className='px-2 py-1 border rounded text-black'
+          >
+            <option value={"all"}>ALL</option>
+            {countries.map((country) => (
+              <option key={country} value={country}>
+                {country}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
-          onClick={downloadJapanTop5CSV}
-          className='mt-4 px-4 py-2 bg-green-500 text-white rounded ml-2'
+          onClick={downloadCountryTopNCSV}
+          className='px-4 py-2 bg-green-500 text-white rounded'
         >
-          일본 통계
+          국가 통계
         </button>
       </div>
       {data && (
