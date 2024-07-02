@@ -22,7 +22,7 @@ const CSVUploader: React.FC = () => {
   const [brandData, setBrandData] = useState<Record<string, string>>({});
   const [topN, setTopN] = useState<number>(5);
   const [countries, setCountries] = useState<string[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("All");
 
   const handleFileUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -95,10 +95,12 @@ const CSVUploader: React.FC = () => {
 
       // 배송국가 목록 추출
       const countryList = Array.from(
+        // @ts-ignore
         new Set(mappedData.map((row) => row.배송국가))
       );
-      setCountries(countryList);
-      setSelectedCountry(countryList[0] || ""); // 첫 번째 국가를 기본 선택
+      // @ts-ignore
+      setCountries(["All", ...countryList]);
+      setSelectedCountry("All"); // 기본으로 "All" 선택
     } else if (type === "new") {
       const newCSVData = results.reduce(
         (acc: Record<string, string>, row: any) => {
@@ -131,11 +133,11 @@ const CSVUploader: React.FC = () => {
   };
 
   const downloadCountryTopNCSV = () => {
-    if (data && selectedCountry) {
-      const countryData = data.filter(
-        (row) =>
-          row["배송국가"] === selectedCountry || selectedCountry === "all"
-      );
+    if (data) {
+      const countryData =
+        selectedCountry === "All"
+          ? data
+          : data.filter((row) => row["배송국가"] === selectedCountry);
       const aggregatedData = countryData.reduce(
         (acc: Record<string, { totalAmount: number; count: number }>, row) => {
           if (acc[row["상품번호"]]) {
@@ -215,7 +217,6 @@ const CSVUploader: React.FC = () => {
             onChange={(e) => setSelectedCountry(e.target.value)}
             className='px-2 py-1 border rounded text-black'
           >
-            <option value={"all"}>ALL</option>
             {countries.map((country) => (
               <option key={country} value={country}>
                 {country}
